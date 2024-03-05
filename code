@@ -1,0 +1,114 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+import os
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import LabelEncoder
+import pandas as pd
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.feature_selection import SelectKBest, f_regression
+from sklearn.metrics import mean_squared_error, r2_score
+
+data=pd.read_csv("D:\B.tech{CS-DS}\OASIS INFOBYTE\TASKS--\Task_5\Advertising.csv")
+print(data)
+print(data.head(5))
+print("-------------------------------------------------------------")
+print(data.tail(5))
+print("-------------------------------------------------------------")
+print(data.info())
+print("-------------------------------------------------------------")
+missing_values=data.isna().sum()
+print(missing_values)
+print("-------------------------------------------------------------")
+print(np.unique(data['TV']))
+print("-------------------------------------------------------------")
+print(np.unique(data['Radio']))
+print("-------------------------------------------------------------")
+print(np.unique(data['Newspaper']))
+print("-------------------------------------------------------------")
+print(np.unique(data['Sales']))
+print("-------------------------------------------------------------")
+data['TV']=data['TV'].astype('category')
+data['Radio']=data['Radio'].astype('category')
+data['Newspaper']=data['Newspaper'].astype('category')
+data['Sales']=data['Sales'].astype('category')
+print(data.info())
+label_encoder = LabelEncoder()
+data['TV'] = label_encoder.fit_transform(data['TV'])
+data['Radio'] = label_encoder.fit_transform(data['Radio'])
+data['Newspaper'] = label_encoder.fit_transform(data['Newspaper'])
+data['Sales'] = label_encoder.fit_transform(data['Sales'])
+print("-------------------------------------------------------------")
+print(data.info())
+print("-------------------------------------------------------------")
+missing_count = data.isnull().sum()
+print("Missing count in each column:")
+print(missing_count)
+# Split the data into features and target variable
+X = data[['TV', 'Radio', 'Newspaper']]
+y = data['Sales']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+
+def calculate_metrics(model, X, y, cv=5):
+    mse_scores = cross_val_score(model, X, y, cv=cv, scoring='neg_mean_squared_error')
+    r2_scores = cross_val_score(model, X, y, cv=cv, scoring='r2')
+    return mse_scores, r2_scores
+
+def print_regression_equation(model, X, y):
+    model.fit(X, y)
+    coef = model.coef_
+    intercept = model.intercept_
+    print("Linear Regression Equation:")
+    print("y = {:.2f}".format(intercept), end=" ")
+    for i in range(len(coef)):
+        print("+ {:.2f} * X{}".format(coef[i], i+1), end=" ")
+    print()
+print("-------------------------------------------------------------")
+
+def feature_selection_anova(X_train, X_test, y_train, k=3):
+    selector = SelectKBest(score_func=f_regression, k=k)
+    X_train_selected = selector.fit_transform(X_train, y_train)
+    X_test_selected = selector.transform(X_test)
+    return X_train_selected, X_test_selected
+
+mse_scores_train, r2_scores_train = calculate_metrics(model, X_train, y_train)
+print("Foldwise MSE without feature selection on training validation:", mse_scores_train)
+print("Foldwise R2 without feature selection on training validation:", r2_scores_train)
+print("-------------------------------------------------------------")
+print_regression_equation(model, X_train, y_train)
+
+X_train_selected, X_test_selected = feature_selection_anova(X_train, X_test, y_train)
+
+mse_scores_train_selected, r2_scores_train_selected = calculate_metrics(model, X_train_selected, y_train)
+print("Foldwise MSE with feature selection on training validation:", mse_scores_train_selected)
+print("Foldwise R2 with feature selection on training validation:", r2_scores_train_selected)
+print("-------------------------------------------------------------")
+
+print_regression_equation(model, X_train_selected, y_train)
+
+model.fit(X_train, y_train)
+y_pred_test = model.predict(X_test)
+mse_test = mean_squared_error(y_test, y_pred_test)
+r2_test = r2_score(y_test, y_pred_test)
+print("Testing MSE without feature selection:", mse_test)
+print("Testing R2 without feature selection:", r2_test)
+print("-------------------------------------------------------------")
+
+model.fit(X_train_selected, y_train)
+y_pred_test_selected = model.predict(X_test_selected)
+mse_test_selected = mean_squared_error(y_test, y_pred_test_selected)
+r2_test_selected = r2_score(y_test, y_pred_test_selected)
+print("Testing MSE with feature selection:", mse_test_selected)
+print("Testing R2 with feature selection:", r2_test_selected)
+print("-------------------------------------------------------------")
+# Fit the model on the training data
+model.fit(X_train, y_train)
+
+# Calculate the R-squared score on the test data
+accuracy = model.score(X_test, y_test)
+print("Accuracy (R-squared) on test set:", accuracy)
